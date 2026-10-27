@@ -1,0 +1,132 @@
+learn_command:
+  name: Learn IR/RF command
+  description: >-
+    Learn a signal through the chosen Home Assistant remote entity. The hardware
+    integration must support learning. A new metadata record is created only after
+    the provider confirms success. Supply remote_entity or config_entry_id when
+    managing more than one remote.
+  fields:
+    remote_entity:
+      name: Managed remote entity
+      description: Choose a remote previously added to Universal IR RF Remote Manager.
+      selector:
+        entity:
+          domain: remote
+    config_entry_id:
+      name: Manager config entry ID (advanced)
+      description: Alternative to remote_entity; find it in integration diagnostics.
+      selector:
+        text:
+    device:
+      name: Appliance name
+      required: true
+      selector:
+        text:
+    command:
+      name: Command name
+      required: true
+      selector:
+        text:
+    command_type:
+      name: Signal type
+      description: >-
+        IR is the default. RF works only with providers and devices that support it.
+        RF 315/433 band selection requires a separately configured frequency entity.
+      selector:
+        select:
+          options:
+            - {label: Infrared (IR), value: ir}
+            - {label: Radio frequency (RF), value: rf}
+            - {label: RF 315 MHz (optional band control), value: rf_315}
+            - {label: RF 433.92 MHz (optional band control), value: rf_433}
+    alternative:
+      name: Learn alternating codes
+      description: Supported only by remote providers that implement alternating codes.
+      default: false
+      selector:
+        boolean:
+send_command:
+  name: Send IR/RF command
+  description: >-
+    Send via the selected Home Assistant remote. Provider-specific inline raw codes
+    are allowed; omit device for remotes that support sending raw codes without it.
+  fields:
+    remote_entity:
+      name: Managed remote entity
+      selector:
+        entity:
+          domain: remote
+    config_entry_id:
+      name: Manager config entry ID (advanced)
+      selector:
+        text:
+    device:
+      name: Appliance name (if required by provider)
+      selector:
+        text:
+    command:
+      name: Command or supported raw code
+      required: true
+      selector:
+        text:
+    repeats:
+      name: Repeats
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 5
+          step: 1
+          mode: box
+    delay_secs:
+      name: Delay between commands (seconds)
+      description: Optional; only applies when supported by the remote provider.
+      selector:
+        number:
+          min: 0
+          max: 30
+          step: 0.1
+          mode: box
+delete_command:
+  name: Delete IR/RF command
+  description: >-
+    Delete from provider storage and this manager's metadata library. If the
+    provider does not support deletion, select local_only to retain its learned code.
+  fields:
+    remote_entity:
+      name: Managed remote entity
+      selector:
+        entity:
+          domain: remote
+    config_entry_id:
+      name: Manager config entry ID (advanced)
+      selector:
+        text:
+    device:
+      name: Appliance name
+      required: true
+      selector:
+        text:
+    command:
+      name: Command name
+      required: true
+      selector:
+        text:
+    local_only:
+      name: Only delete local metadata
+      default: false
+      selector:
+        boolean:
+refresh_library:
+  name: Reload metadata library
+  description: Reload the selected remote's metadata library from disk.
+  fields:
+    remote_entity:
+      name: Managed remote entity
+      selector:
+        entity:
+          domain: remote
+    config_entry_id:
+      name: Manager config entry ID (advanced)
+      selector:
+        text:

@@ -1,0 +1,19 @@
+{
+  "domain": "universal_ir_rf_remote",
+  "name": "Universal IR RF Remote Manager",
+  "version": "4.1.1",
+  "documentation": "https://github.com/khaisilk1910/universal_ir_rf_remote#readme",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": [
+    "@khaisilk1910"
+  ],
+  "iot_class": "calculated",
+  "config_flow": true,
+  "integration_type": "helper",
+  "issue_tracker": "https://github.com/khaisilk1910/universal_ir_rf_remote/issues",
+  "categories": [
+    "buttons_remotes",
+    "helpers"
+  ]
+}

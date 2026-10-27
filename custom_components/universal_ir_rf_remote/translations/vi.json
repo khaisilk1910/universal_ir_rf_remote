@@ -1,0 +1,133 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Thêm remote vào Universal IR RF Remote Manager",
+        "description": "Chọn remote.* đã tồn tại trong Home Assistant (Broadlink, Tuya Local hoặc nhà cung cấp tương thích). Không tạo kết nối riêng đến Hub.",
+        "data": {
+          "remote_entity": "Entity remote"
+        }
+      }
+    },
+    "error": {
+      "remote_missing": "Hãy chọn một remote entity đang tồn tại.",
+      "already_configured": "Remote này đã được thêm vào một cấu hình khác."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Universal IR RF Remote Manager",
+        "description": "Remote đang chọn: {remote}. Hãy chọn thao tác.",
+        "data": {
+          "menu_choice": "Thao tác"
+        }
+      },
+      "learn_command": {
+        "title": "Học lệnh IR/RF",
+        "description": "Remote: {remote}. Thiết bị phải hỗ trợ học tín hiệu. Chỉ chọn dải tần RF 315/433 khi có entity number điều chỉnh tương ứng.",
+        "data": {
+          "device": "Thiết bị cần điều khiển",
+          "command": "Tên lệnh",
+          "command_type": "Loại tín hiệu",
+          "alternative": "Học mã luân phiên"
+        }
+      },
+      "confirm_test": {
+        "title": "Kiểm tra và lưu thông tin",
+        "description": "{status_info}\nThiết bị: {device}, lệnh: {command}, loại: {wave_type}",
+        "data": {
+          "action_choice": "Thao tác",
+          "repeats": "Số lần phát"
+        }
+      },
+      "library": {
+        "title": "Thư viện tên lệnh",
+        "description": "{banner}\n{library_summary}",
+        "data": {
+          "selected_item": "Lệnh đã lưu",
+          "lib_action": "Thao tác"
+        }
+      },
+      "send_command": {
+        "title": "Phát lệnh IR/RF",
+        "description": "Gửi lệnh bằng remote này. Mã phải được lưu trong nhà cung cấp hoặc được nhà cung cấp hỗ trợ dạng trực tiếp.",
+        "data": {
+          "device": "Thiết bị",
+          "command": "Tên lệnh",
+          "repeats": "Số lần phát"
+        }
+      },
+      "settings": {
+        "title": "Cài đặt remote và quạt tùy chọn",
+        "description": "Mỗi remote có thư viện riêng. Quạt yêu cầu speed_1..speed_N và turn_off. Chỉ khai báo entity tần số RF nếu phần cứng có hỗ trợ.",
+        "data": {
+          "remote_entity": "Remote đang quản lý",
+          "enable_fan": "Tạo entity quạt",
+          "fan_device": "Tên thiết bị quạt",
+          "fan_speed_count": "Số cấp tốc độ quạt",
+          "rf_frequency_entity": "Entity number điều chỉnh RF (tùy chọn)"
+        }
+      }
+    },
+    "error": {
+      "library_failed": "Không thể đọc/ghi thư viện; tệp cũ được giữ nguyên.",
+      "invalid_name": "Chọn tên thiết bị và lệnh hợp lệ.",
+      "learn_failed": "Remote không thể học tín hiệu.",
+      "send_failed": "Remote không thể phát tín hiệu.",
+      "delete_failed": "Remote từ chối hoặc không hỗ trợ xóa mã.",
+      "library_action_failed": "Thao tác với thư viện thất bại.",
+      "remote_missing": "Chọn remote entity đã tồn tại.",
+      "already_configured": "Remote đã được cấu hình ở nơi khác."
+    },
+    "abort": {
+      "action_complete": "Đã hoàn tất thao tác."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "learned_commands": {
+        "name": "Số lệnh đã học",
+        "unit_of_measurement": "lệnh"
+      }
+    }
+  },
+  "selector": {
+    "menu_choice": {
+      "options": {
+        "learn_command": "Học lệnh mới",
+        "library": "Thư viện lệnh",
+        "send_command": "Phát thử lệnh",
+        "settings": "Cài đặt remote và quạt"
+      }
+    },
+    "command_type": {
+      "options": {
+        "ir": "Hồng ngoại (IR)",
+        "rf": "Sóng vô tuyến (RF)",
+        "rf_315": "RF 315 MHz (cần hỗ trợ chọn băng tần)",
+        "rf_433": "RF 433,92 MHz (cần hỗ trợ chọn băng tần)"
+      }
+    },
+    "action_choice": {
+      "options": {
+        "test": "Phát lệnh thử",
+        "confirm": "Xác nhận lưu tên lệnh",
+        "save_and_next": "Lưu và học tiếp",
+        "relearn": "Học lại",
+        "delete_abort": "Xóa lệnh trên remote rồi hủy"
+      }
+    },
+    "lib_action": {
+      "options": {
+        "test": "Phát thử",
+        "relearn": "Học lại",
+        "delete": "Chỉ xóa metadata cục bộ",
+        "delete_remote": "Xóa trên remote và metadata",
+        "add_new": "Học lệnh mới",
+        "back_menu": "Quay về menu",
+        "close": "Đóng"
+      }
+    }
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a remote to Universal IR RF Remote Manager",
+        "description": "Choose an existing remote entity from Home Assistant (Broadlink, Tuya Local or another compatible provider). No additional hub connection is created.",
+        "data": {
+          "remote_entity": "Remote entity"
+        }
+      }
+    },
+    "error": {
+      "remote_missing": "Choose an existing Home Assistant remote entity.",
+      "already_configured": "This remote is already managed by another entry."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Universal IR RF Remote Manager",
+        "description": "Selected remote: {remote}. Choose an action.",
+        "data": {
+          "menu_choice": "Action"
+        }
+      },
+      "learn_command": {
+        "title": "Learn an IR/RF command",
+        "description": "Remote: {remote}. The remote provider must support learning this signal. Optional 315/433 MHz selection requires a configured frequency number entity.",
+        "data": {
+          "device": "Appliance",
+          "command": "Command",
+          "command_type": "Signal type",
+          "alternative": "Alternating codes"
+        }
+      },
+      "confirm_test": {
+        "title": "Test and save metadata",
+        "description": "{status_info}\nAppliance: {device}, command: {command}, type: {wave_type}",
+        "data": {
+          "action_choice": "Action",
+          "repeats": "Repeats"
+        }
+      },
+      "library": {
+        "title": "Remote command metadata",
+        "description": "{banner}\n{library_summary}",
+        "data": {
+          "selected_item": "Saved command",
+          "lib_action": "Action"
+        }
+      },
+      "send_command": {
+        "title": "Send IR/RF command",
+        "description": "Send a command through this remote. The signal must already be stored by the provider, or be an inline code that provider accepts.",
+        "data": {
+          "device": "Appliance",
+          "command": "Command",
+          "repeats": "Repeats"
+        }
+      },
+      "settings": {
+        "title": "Remote and optional fan settings",
+        "description": "Each remote has its own library. Fan requires learned speed_1..speed_N and turn_off commands. Leave RF frequency entity empty unless the selected remote explicitly provides one.",
+        "data": {
+          "remote_entity": "Managed remote entity",
+          "enable_fan": "Create fan entity",
+          "fan_device": "Fan appliance name",
+          "fan_speed_count": "Fan speed levels",
+          "rf_frequency_entity": "Optional RF frequency number entity"
+        }
+      }
+    },
+    "error": {
+      "library_failed": "Unable to read/write metadata; existing file was preserved.",
+      "invalid_name": "A valid device and command must be selected.",
+      "learn_failed": "The remote provider could not learn this signal.",
+      "send_failed": "The remote provider could not send this signal.",
+      "delete_failed": "The remote provider refused or does not support deletion.",
+      "library_action_failed": "The requested library action failed.",
+      "remote_missing": "Choose an existing Home Assistant remote entity.",
+      "already_configured": "This remote is managed by another entry."
+    },
+    "abort": {
+      "action_complete": "Action completed."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "learned_commands": {
+        "name": "Learned commands",
+        "unit_of_measurement": "commands"
+      }
+    }
+  },
+  "selector": {
+    "menu_choice": {
+      "options": {
+        "learn_command": "Learn a new command",
+        "library": "Command library",
+        "send_command": "Send a test command",
+        "settings": "Remote and fan settings"
+      }
+    },
+    "command_type": {
+      "options": {
+        "ir": "Infrared (IR)",
+        "rf": "Radio frequency (RF)",
+        "rf_315": "RF 315 MHz (optional band control)",
+        "rf_433": "RF 433.92 MHz (optional band control)"
+      }
+    },
+    "action_choice": {
+      "options": {
+        "test": "Send test command",
+        "confirm": "Confirm and save metadata",
+        "save_and_next": "Save and learn another",
+        "relearn": "Learn again",
+        "delete_abort": "Delete provider command and cancel"
+      }
+    },
+    "lib_action": {
+      "options": {
+        "test": "Send test command",
+        "relearn": "Learn again",
+        "delete": "Remove only local metadata",
+        "delete_remote": "Delete from provider and metadata",
+        "add_new": "Learn another command",
+        "back_menu": "Back to menu",
+        "close": "Close"
+      }
+    }
+  }
+}

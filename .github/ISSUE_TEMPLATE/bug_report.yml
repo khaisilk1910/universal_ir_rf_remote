@@ -1,0 +1,46 @@
+name: Bug report
+description: Report an integration bug
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please make sure your provider's `remote.*` entity works on its own before reporting a manager bug.
+        Never attach learned IR/RF waveform dumps, tokens, private addresses, or unredacted diagnostics.
+  - type: input
+    id: version
+    attributes:
+      label: Manager version
+      placeholder: e.g. 4.1.1 (see installed integration version)
+    validations:
+      required: true
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant Core version
+    validations:
+      required: true
+  - type: input
+    id: provider
+    attributes:
+      label: Remote provider / integration
+      placeholder: Broadlink / Tuya Local / other
+    validations:
+      required: true
+  - type: dropdown
+    id: protocol
+    attributes:
+      label: Protocol
+      options: [IR, RF, Both, Not applicable]
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Describe what you did and what happened. Redact identifiers and secrets.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs (redacted)
+      render: text
