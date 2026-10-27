@@ -46,9 +46,6 @@ Thư viện của manager chỉ lưu **metadata** (ví dụ tên lệnh, loại 
 
 ### Tự thêm vào HACS
 
-
-## Cài đặt qua HACS
-
 Nhấn nút dưới đây để mở trực tiếp repository này trong HACS:
 
 [![Mở repository trong HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=khaisilk1910&repository=universal_ir_rf_remote&category=integration)
