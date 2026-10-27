@@ -44,7 +44,24 @@ Thư viện của manager chỉ lưu **metadata** (ví dụ tên lệnh, loại 
 
 ## Cài đặt
 
-### Cách 1 — HACS (khuyến nghị)
+### Tự thêm vào HACS
+
+
+## Cài đặt qua HACS
+
+Nhấn nút dưới đây để mở trực tiếp repository này trong HACS:
+
+[![Mở repository trong HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=khaisilk1910&repository=universal_ir_rf_remote&category=integration)
+
+Sau đó:
+
+1. Chọn **Download** trong HACS để cài đặt tích hợp.
+2. Khởi động lại Home Assistant.
+3. Vào **Settings → Devices & services → Add integration**.
+4. Tìm **Universal IR RF Remote Manager** và hoàn tất cấu hình theo giao diện.
+
+
+### Thủ công trên HACS
 
 1. Cài và cấu hình [HACS](https://www.hacs.xyz/) trong Home Assistant.
 2. Mở **HACS → ⋮ → Custom repositories**.
