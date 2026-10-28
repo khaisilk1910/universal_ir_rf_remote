@@ -7,7 +7,6 @@ migrated, and is disabled automatically when a mapped fan is configured.
 
 from __future__ import annotations
 
-import math
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.core import HomeAssistant, callback
@@ -21,6 +20,19 @@ from homeassistant.helpers.event import async_track_state_change_event
 from . import ManagerConfigEntry, RemoteRuntime, async_send
 from .button import appliance_device_info
 from .const import DOMAIN
+
+
+def _percentage_to_level(percentage: float, speed_count: int) -> int:
+    """Snap a dashboard percentage to the nearest *real* fan speed.
+
+    HA's Tile slider emits fractional 100 / speed_count steps, while the
+    fan service may convert those values to integers before delivery.
+    Prefer the closest physical step, not ceil(): e.g. the displayed 17%
+    is still level 1 of a six-speed fan, never level 2.
+    This pure calculation does not call services or perform any I/O.
+    """
+    count = max(1, speed_count)
+    return max(1, min(count, int(percentage * count / 100 + 0.5)))
 
 
 async def async_setup_entry(
@@ -176,7 +188,7 @@ class MappedRemoteFan(FanEntity):
         speeds = self._config().get("speeds", [])
         if not speeds:
             raise ServiceValidationError("No speed commands mapped for this fan")
-        level = max(1, min(len(speeds), math.ceil(percentage * len(speeds) / 100)))
+        level = _percentage_to_level(percentage, len(speeds))
         await self._async_send_speed_level(level)
 
     async def async_turn_on(self, percentage: int | None = None,
@@ -326,7 +338,7 @@ class GenericRemoteFan(FanEntity):
         if percentage <= 0:
             await self.async_turn_off()
             return
-        level = max(1, min(self.speed_count, math.ceil(percentage * self.speed_count / 100)))
+        level = _percentage_to_level(percentage, self.speed_count)
         await self._async_send_speed_level(level)
 
     async def async_turn_on(self, percentage: int | None = None,
