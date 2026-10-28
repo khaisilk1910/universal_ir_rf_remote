@@ -5,7 +5,8 @@
         "title": "Add a remote to Universal IR RF Remote Manager",
         "description": "Choose an existing remote entity from Home Assistant (Broadlink, Tuya Local or another compatible provider). No additional hub connection is created.",
         "data": {
-          "remote_entity": "Remote entity"
+          "remote_entity": "Remote entity",
+          "name": "Display name for this remote (optional)"
         }
       }
     },
@@ -25,13 +26,14 @@
       },
       "learn_command": {
         "title": "Learn an IR/RF command",
-        "description": "Remote: {remote}. The remote provider must support learning this signal. Optional 315/433 MHz selection requires a configured frequency number entity.",
+        "description": "Remote: {remote}. Choose IR or RF and tap **Start learning** to start waiting for a signal. IR: press the remote button once when learning starts. Broadlink RF: its firmware requires frequency scan (hold or repeatedly press), then one short press to capture. You cannot skip the RF sweep or manually select 315/433 here. Follow Home Assistant Notifications.",
         "data": {
           "device": "Appliance",
           "command": "Command",
-          "command_type": "Signal type",
+          "command_type": "Signal type (IR / RF)",
           "alternative": "Alternating codes"
-        }
+        },
+        "submit": "Start learning"
       },
       "confirm_test": {
         "title": "Test and save metadata",
@@ -59,14 +61,129 @@
         }
       },
       "settings": {
-        "title": "Remote and optional fan settings",
-        "description": "Each remote has its own library. Fan requires learned speed_1..speed_N and turn_off commands. Leave RF frequency entity empty unless the selected remote explicitly provides one.",
+        "title": "Remote and fan management",
+        "description": "Add, edit or remove a fan linked to a saved virtual appliance. Removing a fan mapping keeps the appliance and its commands.",
         "data": {
-          "remote_entity": "Managed remote entity",
-          "enable_fan": "Create fan entity",
-          "fan_device": "Fan appliance name",
-          "fan_speed_count": "Fan speed levels",
-          "rf_frequency_entity": "Optional RF frequency number entity"
+          "settings_action": "Action"
+        }
+      },
+      "devices": {
+        "title": "Virtual appliances",
+        "description": "Manage appliances under this remote. {device_count} devices saved.",
+        "data": {
+          "device_action": "Action",
+          "selected_device": "Appliance"
+        }
+      },
+      "create_device": {
+        "title": "Create an appliance",
+        "description": "Give this appliance a friendly name. Provider device key is optional and should remain fixed when renamed.",
+        "data": {
+          "name": "Appliance name",
+          "kind": "Appliance type",
+          "provider_device": "Provider device key (optional)"
+        }
+      },
+      "edit_device": {
+        "title": "Edit appliance",
+        "description": "Original provider key: {provider_device}. Renaming only changes the display name, not stored signal codes.",
+        "data": {
+          "name": "Display name",
+          "kind": "Type",
+          "edit_action": "Action"
+        }
+      },
+      "confirm_delete_device": {
+        "title": "Delete appliance?",
+        "description": "Delete {device} and its {command_count} locally saved command entries? Broadlink/provider codes are retained.",
+        "data": {
+          "confirm": "Confirm deletion"
+        }
+      },
+      "manage_commands": {
+        "title": "Appliance commands",
+        "description": "Device: {device}. Saved commands: {command_count}. Use Import for existing Broadlink Base64 signals.",
+        "data": {
+          "command_action": "Action",
+          "selected_command": "Command"
+        }
+      },
+      "edit_command": {
+        "title": "Rename command",
+        "description": "Rename {command} without changing its source Broadlink command or raw code.",
+        "data": {
+          "name": "New name"
+        }
+      },
+      "confirm_delete_command": {
+        "title": "Delete saved command?",
+        "description": "Remove {command} from {device}? Original Broadlink provider codes are retained.",
+        "data": {
+          "confirm": "Confirm deletion"
+        }
+      },
+      "import_code": {
+        "title": "Import Broadlink Base64",
+        "description": "Choose an appliance, enter a name and paste Base64 code (with or without b64:). This avoids RF learning entirely. Supported for providers accepting raw b64: packets, including Broadlink.",
+        "data": {
+          "device": "Appliance",
+          "command": "Command label",
+          "command_type": "Signal type",
+          "code": "Base64 code"
+        }
+      },
+      "fan_pick": {
+        "title": "Select a saved appliance",
+        "description": "Remote: {remote}. Action: {action}. Only appliances belonging to this remote are available. Create an appliance and import its commands first.",
+        "data": {
+          "fan_device_id": "Saved appliance"
+        }
+      },
+      "fan_count": {
+        "title": "Speed levels",
+        "description": "Appliance: {device}. Select how many real command codes to map.",
+        "data": {
+          "fan_speed_count": "Speed count"
+        }
+      },
+      "fan_map": {
+        "title": "Map fan commands",
+        "description": "Appliance: {device}. Remote: {remote}. Choose one distinct saved command per speed. Choose an OFF command. If none is chosen, the integration can recognize an existing code named turn_off, off or power_off.",
+        "data": {
+          "speed_1": "Speed 1",
+          "speed_2": "Speed 2",
+          "speed_3": "Speed 3",
+          "speed_4": "Speed 4",
+          "speed_5": "Speed 5",
+          "speed_6": "Speed 6",
+          "speed_7": "Speed 7",
+          "speed_8": "Speed 8",
+          "speed_9": "Speed 9",
+          "speed_10": "Speed 10",
+          "off_command": "OFF command (optional)"
+        }
+      },
+      "fan_confirm_delete": {
+        "title": "Remove fan entity?",
+        "description": "Remove the fan entity for {device}? Saved signals and the virtual appliance will remain.",
+        "data": {
+          "confirm": "Confirm"
+        }
+      },
+      "remote_settings": {
+        "title": "Remote provider settings",
+        "description": "Select the remote entity. Only choose an RF frequency number.* entity when your hardware provider supports explicit band setting. Broadlink does not need one.",
+        "data": {
+          "remote_entity": "Source remote",
+          "rf_frequency_entity": "RF frequency number (optional)",
+          "enable_fan": "Keep legacy fan entity"
+        }
+      },
+      "fan_rename": {
+        "title": "Rename fan appliance",
+        "description": "Rename {device}. This does not alter the physical commands or fan linkage.",
+        "data": {
+          "name": "New name"
         }
       }
     },
@@ -78,10 +195,21 @@
       "delete_failed": "The remote provider refused or does not support deletion.",
       "library_action_failed": "The requested library action failed.",
       "remote_missing": "Choose an existing Home Assistant remote entity.",
-      "already_configured": "This remote is managed by another entry."
+      "already_configured": "This remote is managed by another entry.",
+      "invalid_code": "Invalid Base64 format or size.",
+      "band_not_supported": "For Broadlink use RF. Do not choose 315/433 or enter a frequency.",
+      "no_fan_devices": "No suitable appliance. Create an appliance and add commands first, or select an existing configured fan to edit or remove.",
+      "invalid_fan_commands": "Each speed must use a distinct saved command from the selected appliance; OFF must also be different.",
+      "remote_unavailable": "The selected remote is unavailable or missing. Reconnect it and retry.",
+      "learn_timeout": "No signal was captured before the learning timeout. Try remote.learn_command directly and check Logs / Notifications.",
+      "learn_cancelled": "Learning was canceled. The command was not saved."
     },
     "abort": {
       "action_complete": "Action completed."
+    },
+    "progress": {
+      "waiting_ir": "Waiting for IR on {remote} for {device} / {command}. **Press the original remote button once**, pointing at the IR receiver. Wait for the learning operation to complete.",
+      "waiting_rf": "Learning RF on {remote} for {device} / {command}. **Broadlink first needs a frequency sweep**: hold the button (or press repeatedly if it does not transmit continuously); watch its LED / Home Assistant Notifications. Then **press briefly once** to capture the code. This step is required by Broadlink hardware."
     }
   },
   "entity": {
@@ -98,7 +226,9 @@
         "learn_command": "Learn a new command",
         "library": "Command library",
         "send_command": "Send a test command",
-        "settings": "Remote and fan settings"
+        "settings": "Remote and fan settings",
+        "devices": "Manage appliances",
+        "import_code": "Import Broadlink Base64 code"
       }
     },
     "command_type": {
@@ -127,6 +257,50 @@
         "add_new": "Learn another command",
         "back_menu": "Back to menu",
         "close": "Close"
+      }
+    },
+    "device_action": {
+      "options": {
+        "create": "Create appliance",
+        "commands": "Manage commands",
+        "edit": "Edit / delete appliance",
+        "learn": "Learn new signal",
+        "import_code": "Import Base64 code",
+        "back_menu": "Back"
+      }
+    },
+    "kind": {
+      "options": {
+        "generic": "Other",
+        "fan": "Fan",
+        "tv": "Television",
+        "light": "Light"
+      }
+    },
+    "edit_action": {
+      "options": {
+        "save": "Save",
+        "delete": "Delete device"
+      }
+    },
+    "command_action": {
+      "options": {
+        "test": "Send test",
+        "edit": "Rename",
+        "delete": "Delete",
+        "import_code": "Import Base64",
+        "learn": "Learn",
+        "back": "Back"
+      }
+    },
+    "settings_action": {
+      "options": {
+        "fan_add": "Add fan from saved appliance",
+        "fan_edit": "Edit existing fan",
+        "fan_delete": "Remove fan entity (keep commands)",
+        "remote_settings": "Remote provider settings",
+        "back_menu": "Back",
+        "fan_rename": "Rename fan"
       }
     }
   }
