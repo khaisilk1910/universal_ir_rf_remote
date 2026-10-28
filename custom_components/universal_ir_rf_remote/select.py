@@ -62,6 +62,24 @@ class FanSpeedSelect(SelectEntity):
         dev = runtime.library.devices[device_id]
         self._attr_device_info = appliance_device_info(runtime, device_id, dev["name"], "fan")
 
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(async_dispatcher_connect(
+            self.hass, self.runtime.command_signal, self._command_sent,
+        ))
+
+    @callback
+    def _command_sent(self, device_id: str, command_id: str) -> None:
+        """Update the selection when a command button or fan sends a signal."""
+        if device_id != self.device_id:
+            return
+        device = self.runtime.library.devices.get(self.device_id, {})
+        for label, record in device.get("commands", {}).items():
+            if record.get("id") == command_id:
+                self._attr_current_option = label
+                self.async_write_ha_state()
+                return
+
     @property
     def options(self) -> list[str]:
         device = self.runtime.library.devices.get(self.device_id)

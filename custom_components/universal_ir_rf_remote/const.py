@@ -3,6 +3,8 @@
 DOMAIN = "universal_ir_rf_remote"
 LIBRARY_FILE = "universal_ir_rf_remote_library.json"
 SIGNAL_LIBRARY_UPDATED = f"{DOMAIN}_library_updated"
+# A lightweight, per-config-entry notification after a successfully sent stored command.
+SIGNAL_COMMAND_SENT = f"{DOMAIN}_command_sent"
 
 CONF_REMOTE_ENTITY = "remote_entity"
 CONF_FAN_DEVICE = "fan_device"

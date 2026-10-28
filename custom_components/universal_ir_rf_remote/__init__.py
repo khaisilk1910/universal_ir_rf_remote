@@ -17,12 +17,13 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.device_registry import DeviceEntry, async_get as async_get_device_registry
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
-    DOMAIN, SIGNAL_LIBRARY_UPDATED, CONF_ENTRY_ID,
+    DOMAIN, SIGNAL_LIBRARY_UPDATED, SIGNAL_COMMAND_SENT, CONF_ENTRY_ID,
     CONF_REMOTE_ENTITY, CONF_ENABLE_FAN,
     CONF_FAN_DEVICE, CONF_FAN_SPEED_COUNT, CONF_RF_FREQUENCY_ENTITY,
     DEFAULT_FAN_DEVICE, DEFAULT_FAN_SPEED_COUNT, DEFAULT_REPEATS,
@@ -43,6 +44,11 @@ class RemoteRuntime:
 
     def option(self, name: str, default):
         return self.entry.options.get(name, self.entry.data.get(name, default))
+
+    @property
+    def command_signal(self) -> str:
+        """Notify entities in this config entry only; never cross remote hubs."""
+        return f"{SIGNAL_COMMAND_SENT}_{self.entry.entry_id}"
 
     @property
     def remote_entity(self) -> str:
@@ -144,10 +150,18 @@ async def async_send(
     command: str, device: str | None = None, repeats: int = DEFAULT_REPEATS,
     delay_secs: float | None = None, context=None,
 ) -> None:
-    """Send named commands or provider-supported raw commands."""
+    """Send a command and notify local entities *only if* the provider succeeds.
+
+    A resolved device_id/command_id is stable across user-visible renames.
+    Raw packets without a saved library mapping cannot identify a fan and must
+    not change any other entity's state.
+    """
+    identity: tuple[str, str] | None = None
     if device and runtime.library is not None:
         saved = await runtime.library.async_resolve(device, command)
         if saved is not None:
+            if saved.get("device_id") and saved.get("id"):
+                identity = (saved["device_id"], saved["id"])
             if saved.get("raw_code"):
                 # Broadlink supports b64: raw packets without a device key.
                 command = saved["raw_code"]
@@ -166,6 +180,10 @@ async def async_send(
     await hass.services.async_call(
         "remote", "send_command", payload, blocking=True, context=context,
     )
+    if identity is not None:
+        # All send paths (buttons, selects, fan, service, options) converge here.
+        # No metadata writes, network requests, or other blocking I/O.
+        async_dispatcher_send(hass, runtime.command_signal, *identity)
 
 
 async def async_delete(

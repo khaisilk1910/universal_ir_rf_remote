@@ -206,6 +206,31 @@ class MappedRemoteFan(FanEntity):
         self.async_on_remove(async_track_state_change_event(
             self.hass, [self.runtime.remote_entity], self._remote_changed,
         ))
+        self.async_on_remove(async_dispatcher_connect(
+            self.hass, self.runtime.command_signal, self._command_sent,
+        ))
+
+    @callback
+    def _command_sent(self, device_id: str, command_id: str) -> None:
+        """Reflect a Press/select/service command in this particular fan.
+
+        Command IDs, not editable labels, are the authoritative mapping.
+        Only a successful send through this integration triggers this signal.
+        """
+        if device_id != self.device_id:
+            return
+        speeds = self._config().get("speeds", [])
+        if command_id in speeds:
+            level = speeds.index(command_id) + 1
+            self._last_on_level = level
+            self._attr_percentage = round(level * 100 / len(speeds))
+        elif command_id == self._off_command_id():
+            self._attr_percentage = 0
+            # Keep _last_on_level for next power-on, as physical remotes do.
+        else:
+            # E.g. light, reverse, and a power *toggle* do not prove ON/OFF.
+            return
+        self.async_write_ha_state()
 
     @callback
     def _remote_changed(self, _event) -> None:
@@ -248,6 +273,34 @@ class GenericRemoteFan(FanEntity):
         self.async_on_remove(async_track_state_change_event(
             self.hass, [self.runtime.remote_entity], self._remote_changed,
         ))
+        self.async_on_remove(async_dispatcher_connect(
+            self.hass, self.runtime.command_signal, self._command_sent,
+        ))
+
+    @callback
+    def _command_sent(self, device_id: str, command_id: str) -> None:
+        """Keep the optional legacy fan in sync with its own saved buttons."""
+        library = self.runtime.library
+        if not library or not library.loaded:
+            return
+        found = library._find(self.runtime.fan_device)
+        if not found or found[0] != device_id:
+            return
+        label = next((label for label, record in found[1]["commands"].items()
+                      if record.get("id") == command_id), None)
+        if label is None:
+            return
+        if label == "turn_off":
+            self._attr_percentage = 0
+        elif label.startswith("speed_") and label[6:].isdigit():
+            level = int(label[6:])
+            if not 1 <= level <= self.speed_count:
+                return
+            self._last_on_level = level
+            self._attr_percentage = round(level * 100 / self.speed_count)
+        else:
+            return
+        self.async_write_ha_state()
 
     @callback
     def _remote_changed(self, _event) -> None:
