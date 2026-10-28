@@ -31,14 +31,13 @@ learn_command:
       name: Signal type
       description: >-
         IR is the default. RF works only with providers and devices that support it.
-        RF 315/433 band selection requires a separately configured frequency entity.
+        Broadlink RF requires a frequency sweep then capture; the integration
+        cannot force 315/433 MHz or skip the sweep.
       selector:
         select:
           options:
             - {label: Infrared (IR), value: ir}
             - {label: Radio frequency (RF), value: rf}
-            - {label: RF 315 MHz (optional band control), value: rf_315}
-            - {label: RF 433.92 MHz (optional band control), value: rf_433}
     alternative:
       name: Learn alternating codes
       description: Supported only by remote providers that implement alternating codes.
@@ -130,3 +129,113 @@ refresh_library:
       name: Manager config entry ID (advanced)
       selector:
         text:
+create_device:
+  name: Create virtual appliance
+  description: Create a named appliance with its own Home Assistant device and command buttons.
+  fields:
+    remote_entity:
+      name: Managed remote
+      selector: {entity: {domain: remote}}
+    name:
+      name: Appliance name
+      required: true
+      selector: {text: {}}
+    kind:
+      name: Type
+      selector:
+        select:
+          options: [generic, fan, tv, light]
+    provider_device:
+      name: Provider device key (optional)
+      selector: {text: {}}
+rename_device:
+  name: Rename virtual appliance
+  description: Keep learned codes intact when renaming an appliance.
+  fields:
+    remote_entity:
+      name: Managed remote
+      selector: {entity: {domain: remote}}
+    device:
+      name: Current appliance name or ID
+      required: true
+      selector: {text: {}}
+    name:
+      name: New name
+      required: true
+      selector: {text: {}}
+delete_device:
+  name: Delete virtual appliance
+  description: Delete the local appliance and buttons. Original provider codes are preserved.
+  fields:
+    remote_entity:
+      name: Managed remote
+      selector: {entity: {domain: remote}}
+    device:
+      name: Appliance name or ID
+      required: true
+      selector: {text: {}}
+rename_command:
+  name: Rename saved command
+  description: Rename a command button while preserving its original provider code and unique ID.
+  fields:
+    remote_entity:
+      name: Managed remote
+      selector: {entity: {domain: remote}}
+    device:
+      name: Appliance
+      required: true
+      selector: {text: {}}
+    command:
+      name: Old command label
+      required: true
+      selector: {text: {}}
+    name:
+      name: New command label
+      required: true
+      selector: {text: {}}
+import_code:
+  name: Import Broadlink Base64 code
+  description: Save an existing IR/RF packet for a named appliance without re-learning it.
+  fields:
+    remote_entity:
+      name: Managed remote
+      selector: {entity: {domain: remote}}
+    device:
+      name: Appliance name
+      required: true
+      selector: {text: {}}
+    command:
+      name: Command label
+      required: true
+      selector: {text: {}}
+    command_type:
+      name: Signal type
+      selector:
+        select:
+          options: [ir, rf]
+    code:
+      name: Base64 (optionally prefixed with b64:)
+      required: true
+      selector:
+        text:
+          multiline: true
+import_codes:
+  name: Import multiple Base64 codes
+  description: Atomically import a map of command labels to Broadlink Base64 signals for one virtual appliance.
+  fields:
+    remote_entity:
+      name: Managed remote
+      selector: {entity: {domain: remote}}
+    device:
+      name: Appliance name
+      required: true
+      selector: {text: {}}
+    command_type:
+      name: Signal type
+      selector:
+        select:
+          options: [ir, rf]
+    codes:
+      name: Codes by command label
+      required: true
+      selector: {object: {}}

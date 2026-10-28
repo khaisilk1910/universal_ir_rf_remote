@@ -18,6 +18,7 @@ from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.start import async_at_started
+from homeassistant.helpers.device_registry import DeviceEntry, async_get as async_get_device_registry
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
@@ -29,7 +30,7 @@ from .const import (
 from .library import CodeLibrary
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = (Platform.FAN, Platform.SENSOR)
+PLATFORMS = (Platform.FAN, Platform.SENSOR, Platform.BUTTON, Platform.SELECT)
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
@@ -98,8 +99,13 @@ def _runtime_for_service(hass: HomeAssistant, data: dict) -> RemoteRuntime:
 
 async def async_prepare_frequency(hass: HomeAssistant, runtime: RemoteRuntime, command_type: str) -> None:
     """Never infer RF hardware bands or datapoint identifiers."""
-    if command_type not in ("rf_315", "rf_433") or not runtime.rf_frequency_entity:
+    if command_type not in ("rf_315", "rf_433"):
         return
+    if not runtime.rf_frequency_entity:
+        raise ServiceValidationError(
+            "315/433 band selection requires a supported frequency number entity. "
+            "For Broadlink select RF, not RF 315/433; Broadlink scans the band automatically."
+        )
     frequency = 315.0 if command_type == "rf_315" else 433.92
     await hass.services.async_call(
         "number", "set_value",
@@ -115,6 +121,12 @@ async def async_learn(
 ) -> None:
     """Let provider learn/store the real waveform; metadata saved separately."""
     await async_prepare_frequency(hass, runtime, command_type)
+    # A friendly appliance name may differ from the provider's immutable lookup key.
+    if runtime.library is not None and hasattr(runtime.library, "async_load"):
+        await runtime.library.async_load()
+        matched = runtime.library._find(device)
+        if matched:
+            device = matched[1]["provider_device"]
     payload = {
         "entity_id": runtime.remote_entity, "device": device, "command": command,
     }
@@ -133,6 +145,16 @@ async def async_send(
     delay_secs: float | None = None, context=None,
 ) -> None:
     """Send named commands or provider-supported raw commands."""
+    if device and runtime.library is not None:
+        saved = await runtime.library.async_resolve(device, command)
+        if saved is not None:
+            if saved.get("raw_code"):
+                # Broadlink supports b64: raw packets without a device key.
+                command = saved["raw_code"]
+                device = None
+            else:
+                command = saved["provider_command"]
+                device = saved["provider_device"]
     payload = {
         "entity_id": runtime.remote_entity, "command": command,
         "num_repeats": repeats,
@@ -151,10 +173,20 @@ async def async_delete(
     local_only: bool = False, context=None,
 ) -> None:
     """Do not erase metadata if provider deletion fails."""
+    command_in_provider = command
+    device_in_provider = device
+    if runtime.library is not None and hasattr(runtime.library, "async_resolve"):
+        saved = await runtime.library.async_resolve(device, command)
+        if saved:
+            if saved.get("raw_code"):
+                local_only = True  # Imported codes do not exist in provider storage.
+            else:
+                device_in_provider = saved["provider_device"]
+                command_in_provider = saved["provider_command"]
     if not local_only:
         await hass.services.async_call(
             "remote", "delete_command",
-            {"entity_id": runtime.remote_entity, "device": device, "command": command},
+            {"entity_id": runtime.remote_entity, "device": device_in_provider, "command": command_in_provider},
             blocking=True, context=context,
         )
     await runtime.library.async_remove(device, command)
@@ -183,8 +215,10 @@ def _register_services(hass: HomeAssistant) -> None:
             command=call.data["command"], command_type=command_type,
             alternative=call.data["alternative"], context=call.context,
         )
+        # Broadlink can log a failed learn without propagating an exception.
+        # Record an unverified entry so the user must still test it physically.
         await runtime.library.async_record(
-            call.data["device"], call.data["command"], command_type,
+            call.data["device"], call.data["command"], command_type, verified=False,
         )
 
     async def send(call: ServiceCall) -> None:
@@ -205,6 +239,84 @@ def _register_services(hass: HomeAssistant) -> None:
     async def refresh(call: ServiceCall) -> None:
         await _runtime_for_service(hass, call.data).library.async_load(force=True)
 
+    async def create_device(call: ServiceCall) -> None:
+        runtime = _runtime_for_service(hass, call.data)
+        await runtime.library.async_create_device(
+            call.data["name"], kind=call.data.get("kind", "generic"),
+            provider_device=call.data.get("provider_device"),
+        )
+
+    async def rename_device(call: ServiceCall) -> None:
+        runtime = _runtime_for_service(hass, call.data)
+        await runtime.library.async_update_device(call.data["device"], name=call.data["name"])
+
+    async def delete_device(call: ServiceCall) -> None:
+        runtime = _runtime_for_service(hass, call.data)
+        await async_remove_virtual_device(hass, runtime, call.data["device"])
+
+    async def rename_command(call: ServiceCall) -> None:
+        runtime = _runtime_for_service(hass, call.data)
+        await runtime.library.async_update_command(
+            call.data["device"], call.data["command"], name=call.data["name"],
+        )
+
+    async def import_code(call: ServiceCall) -> None:
+        runtime = _runtime_for_service(hass, call.data)
+        # Base64 is stored locally; never copy it to third-party storage files.
+        await runtime.library.async_record(
+            call.data["device"], call.data["command"],
+            call.data.get("command_type", "rf"), raw_code=call.data["code"],
+        )
+
+    async def import_codes(call: ServiceCall) -> None:
+        runtime = _runtime_for_service(hass, call.data)
+        await runtime.library.async_import_codes(
+            call.data["device"], call.data["codes"],
+            command_type=call.data.get("command_type", "rf"),
+        )
+
+    device_fields = {**targets,
+        vol.Required("device"): vol.All(cv.string, vol.Length(min=1, max=128)),
+    }
+    hass.services.async_register(
+        DOMAIN, "create_device", create_device,
+        schema=vol.Schema({**targets,
+            vol.Required("name"): vol.All(cv.string, vol.Length(min=1, max=128)),
+            vol.Optional("kind", default="generic"): vol.In(("generic", "fan", "tv", "light")),
+            vol.Optional("provider_device"): cv.string,
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN, "rename_device", rename_device,
+        schema=vol.Schema({**device_fields,
+            vol.Required("name"): vol.All(cv.string, vol.Length(min=1, max=128)),
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN, "delete_device", delete_device,
+        schema=vol.Schema(device_fields),
+    )
+    hass.services.async_register(
+        DOMAIN, "rename_command", rename_command,
+        schema=vol.Schema({**device_fields, **command_fields,
+            vol.Required("name"): vol.All(cv.string, vol.Length(min=1, max=128)),
+        }),
+    )
+    hass.services.async_register(
+        DOMAIN, "import_code", import_code,
+        schema=vol.Schema({**device_fields, **command_fields,
+            vol.Required("code"): vol.All(cv.string, vol.Length(min=20, max=50000)),
+            vol.Optional("command_type", default="rf"): vol.In(("ir", "rf")),
+        }),
+    )
+
+    hass.services.async_register(
+        DOMAIN, "import_codes", import_codes,
+        schema=vol.Schema({**device_fields,
+            vol.Required("codes"): {cv.string: cv.string},
+            vol.Optional("command_type", default="rf"): vol.In(("ir", "rf")),
+        }),
+    )
     hass.services.async_register(
         DOMAIN, "learn_command", learn,
         schema=vol.Schema({
@@ -272,3 +384,32 @@ async def async_setup_entry(hass: HomeAssistant, entry: ManagerConfigEntry) -> b
 
 async def async_unload_entry(hass: HomeAssistant, entry: ManagerConfigEntry) -> bool:
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_remove_virtual_device(hass: HomeAssistant, runtime: RemoteRuntime, device: str) -> None:
+    """Remove library metadata and its registered HA virtual device."""
+    await runtime.library.async_load()
+    found = runtime.library._find(device)
+    if found is None:
+        raise ServiceValidationError("Virtual appliance not found")
+    key = found[0]
+    await runtime.library.async_delete_device(key)
+    registry = async_get_device_registry(hass)
+    registered = registry.async_get_device(identifiers={(DOMAIN, f"{runtime.entry.entry_id}_{key}")})
+    if registered is not None:
+        registry.async_remove_device(registered.id)
+
+
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, entry: ManagerConfigEntry, device_entry: DeviceEntry,
+) -> bool:
+    """Allow users to delete virtual appliances directly in HA Devices UI."""
+    prefix = f"{entry.entry_id}_"
+    for domain, identifier in device_entry.identifiers:
+        if domain != DOMAIN or not identifier.startswith(prefix):
+            continue
+        key = identifier[len(prefix):]
+        if key in entry.runtime_data.library.devices:
+            await entry.runtime_data.library.async_delete_device(key)
+            return True
+    return False
