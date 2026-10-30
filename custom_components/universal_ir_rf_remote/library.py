@@ -22,7 +22,10 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
-from .const import DOMAIN, LIBRARY_FILE, SIGNAL_LIBRARY_UPDATED
+from .const import (
+    DOMAIN, LIBRARY_FILE, SIGNAL_LIBRARY_UPDATED, APPLIANCE_KINDS,
+    FAN_APPLIANCE_KINDS,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -167,7 +170,7 @@ class CodeLibrary:
     async def async_create_device(self, name: str, *, kind: str = "generic",
                                   provider_device: str | None = None) -> str:
         name = name.strip()
-        if not name or len(name) > 128 or kind not in ("generic", "fan", "tv", "light"):
+        if not name or len(name) > 128 or kind not in APPLIANCE_KINDS:
             raise ValueError("Invalid device name or type")
         async with self._lock:
             await self._load_if_needed()
@@ -194,9 +197,9 @@ class CodeLibrary:
             other = self.device_by_name(name)
             if other and other[0] != key:
                 raise ValueError("Device name already exists")
-            if kind is not None and kind not in ("generic", "fan", "tv", "light"):
+            if kind is not None and kind not in APPLIANCE_KINDS:
                 raise ValueError("Invalid device type")
-            if existing.get("fan") and kind is not None and kind != "fan":
+            if existing.get("fan") and kind is not None and kind not in FAN_APPLIANCE_KINDS:
                 raise ValueError("Remove the fan mapping before changing appliance type")
             devices = deepcopy(self.devices)
             devices[key]["name"] = name
@@ -236,7 +239,8 @@ class CodeLibrary:
                     or (off_id is not None and (off_id not in ids or off_id in speed_ids))):
                 raise ValueError("Select distinct commands belonging to this appliance")
             updated = deepcopy(self.devices)
-            updated[key]["kind"] = "fan"
+            updated[key]["kind"] = (appliance.get("kind")
+                                     if appliance.get("kind") in FAN_APPLIANCE_KINDS else "fan")
             updated[key]["fan"] = {"speeds": list(speed_ids), "off": off_id}
             await self._write(updated)
 

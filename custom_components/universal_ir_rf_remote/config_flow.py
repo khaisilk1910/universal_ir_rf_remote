@@ -16,7 +16,7 @@ from . import RemoteRuntime, async_delete, async_learn, async_send, async_remove
 from .const import (
     DOMAIN, CONF_REMOTE_ENTITY, CONF_ENABLE_FAN,
     CONF_FAN_DEVICE, CONF_FAN_SPEED_COUNT, CONF_RF_FREQUENCY_ENTITY,
-    DEFAULT_FAN_SPEED_COUNT, DEFAULT_REPEATS, DEFAULT_DEVICES,
+    DEFAULT_FAN_SPEED_COUNT, DEFAULT_REPEATS, APPLIANCE_KINDS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -26,9 +26,11 @@ def _entity_selector():
     return selector.EntitySelector(selector.EntitySelectorConfig(domain="remote"))
 
 
-def _name_selector(names):
+def _appliance_selector(devices: dict[str, dict]):
+    """Only selectable, explicitly registered virtual appliances of this hub."""
     return selector.SelectSelector(selector.SelectSelectorConfig(
-        options=list(dict.fromkeys(names)), custom_value=True,
+        options=[{"value": key, "label": dev["name"]}
+                 for key, dev in devices.items()],
         mode=selector.SelectSelectorMode.DROPDOWN,
     ))
 
@@ -37,6 +39,15 @@ def _choice_selector(options, translation_key):
     return selector.SelectSelector(selector.SelectSelectorConfig(
         options=options, translation_key=translation_key,
         mode=selector.SelectSelectorMode.LIST,
+    ))
+
+
+def _appliance_kind_selector():
+    """Compact, searchable native dropdown for all supported appliance groups."""
+    return selector.SelectSelector(selector.SelectSelectorConfig(
+        options=list(APPLIANCE_KINDS),
+        translation_key="kind",
+        mode=selector.SelectSelectorMode.DROPDOWN,
     ))
 
 
@@ -86,7 +97,7 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
     """Manage provider actions without reloading Home Assistant for each command."""
 
     def __init__(self) -> None:
-        self._device = "device"
+        self._device = ""
         self._command = ""
         self._type = "ir"
         self._type_initialized = False
@@ -115,10 +126,22 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
     async def _codes(self):
         return await self._runtime.library.async_load()
 
-    def _devices(self):
-        return list(dict.fromkeys([
-            self._device, *self._runtime.library.codes.keys(), *DEFAULT_DEVICES,
-        ]))
+    def _selected_appliance(self, identifier: str | None = None) -> tuple[str, dict] | None:
+        """Select by immutable id; names only accepted for pre-existing flow data."""
+        devices = self._runtime.library.devices
+        if identifier and identifier in devices:
+            return identifier, devices[identifier]
+        if identifier:
+            return next(((key, dev) for key, dev in devices.items()
+                         if dev["name"] == identifier), None)
+        if self._device_id in devices:
+            return self._device_id, devices[self._device_id]
+        return next(((key, dev) for key, dev in devices.items()
+                     if dev["name"] == self._device), None) or next(iter(devices.items()), None)
+
+    def _set_appliance(self, selected: tuple[str, dict]) -> None:
+        self._device_id = selected[0]
+        self._device = selected[1]["name"]
 
     async def async_step_init(self, user_input=None):
         if user_input is not None:
@@ -214,7 +237,7 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
             data_schema=vol.Schema({
                 vol.Required("name"): selector.TextSelector(),
                 vol.Required("kind", default="generic"):
-                    _choice_selector(["generic", "fan", "tv", "light"], "kind"),
+                    _appliance_kind_selector(),
                 vol.Optional("provider_device"): selector.TextSelector(),
             }))
 
@@ -242,7 +265,7 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
             data_schema=vol.Schema({
                 vol.Required("name", default=dev["name"]): selector.TextSelector(),
                 vol.Required("kind", default=dev.get("kind", "generic")):
-                    _choice_selector(["generic", "fan", "tv", "light"], "kind"),
+                    _appliance_kind_selector(),
                 vol.Required("edit_action", default="save"):
                     _choice_selector(["save", "delete"], "edit_action"),
             }), description_placeholders={"provider_device": dev["provider_device"]})
@@ -362,9 +385,16 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
         except Exception:
             _LOGGER.exception("Cannot load library for import")
             errors["base"] = "library_failed"
+        if not errors and not self._runtime.library.devices:
+            return await self.async_step_devices()
         if user_input is not None and not errors:
-            self._device = str(user_input["device"]).strip()
+            selected = self._selected_appliance(str(user_input.get("device", "")))
             self._command = str(user_input["command"]).strip()
+            if selected is None:
+                errors["base"] = "invalid_name"
+            else:
+                self._set_appliance(selected)
+        if user_input is not None and not errors:
             try:
                 await self._runtime.library.async_record(
                     self._device, self._command, user_input["command_type"],
@@ -379,9 +409,11 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
                 self._set_status("Saved raw code to local library.",
                                  "Da luu ma vao thu vien cuc bo.")
                 return self._finish()
+        selected = self._selected_appliance()
         return self.async_show_form(step_id="import_code", errors=errors,
             data_schema=vol.Schema({
-                vol.Required("device", default=self._device): _name_selector(self._devices()),
+                vol.Required("device", default=selected[0] if selected else ""):
+                    _appliance_selector(self._runtime.library.devices),
                 vol.Required("command", default=self._command): selector.TextSelector(),
                 vol.Required("command_type", default="rf"):
                     _choice_selector(["ir", "rf"], "command_type"),
@@ -409,14 +441,22 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
         except Exception:
             _LOGGER.exception("Unable to read the remote metadata library")
             errors["base"] = "library_failed"
+        if not errors and not self._runtime.library.devices:
+            return await self.async_step_devices()
         if user_input is not None and not errors:
-            self._device = str(user_input["device"]).strip()
             self._command = str(user_input["command"]).strip()
+            selected = self._selected_appliance(str(user_input.get("device", "")))
+            if selected is None:
+                errors["base"] = "invalid_name"
+            else:
+                self._set_appliance(selected)
             self._type = user_input["command_type"]
             self._alternative = bool(user_input.get("alternative", False))
             if (not self._device or len(self._device) > 128
                     or not self._command or len(self._command) > 128):
                 errors["base"] = "invalid_name"
+            elif errors:
+                pass  # invalid or stale appliance selection; never start learning
             elif self._learn_task is not None and not self._learn_task.done():
                 return await self.async_step_learn_progress()
             else:
@@ -439,7 +479,8 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="learn_command", errors=errors,
             data_schema=vol.Schema({
-                vol.Required("device", default=self._device): _name_selector(self._devices()),
+                vol.Required("device", default=(self._selected_appliance() or ("",))[0]):
+                    _appliance_selector(self._runtime.library.devices),
                 vol.Required("command", default=self._command): selector.TextSelector(),
                 # The HA remote API accepts only IR or RF. Separate 315/433
                 # choices are not supported by Broadlink's learn_command API.
@@ -525,21 +566,26 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
                         "Đã phát thử. Hãy kiểm tra thiết bị trước khi lưu.",
                     )
             elif action in ("confirm", "save_and_next"):
-                try:
-                    await self._runtime.library.async_record(
-                        self._device, self._command, self._type,
-                    )
-                except Exception:
-                    _LOGGER.exception("Unable to persist metadata")
-                    errors["base"] = "library_failed"
+                # The appliance may have been removed while hardware was learning.
+                # Never recreate it implicitly as an ungrouped placeholder.
+                await self._codes()
+                if self._device_id not in self._runtime.library.devices:
+                    errors["base"] = "invalid_name"
                 else:
-                    self._pending = False
-                    if action == "save_and_next":
-                        # No fan-specific naming rules: every next command has
-                        # its own freely entered label, regardless of appliance.
-                        self._command = ""
-                        return await self.async_step_learn_command()
-                    return self._finish()
+                    try:
+                        await self._runtime.library.async_record(
+                            self._device, self._command, self._type,
+                        )
+                    except Exception:
+                        _LOGGER.exception("Unable to persist metadata")
+                        errors["base"] = "library_failed"
+                    else:
+                        self._pending = False
+                        if action == "save_and_next":
+                            # Keep the appliance selection, only clear command name.
+                            self._command = ""
+                            return await self.async_step_learn_command()
+                        return self._finish()
             elif action == "relearn":
                 return await self.async_step_learn_command()
             elif action == "delete_abort":
@@ -601,6 +647,9 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
                 errors["base"] = "invalid_name"
             else:
                 self._device, self._command = selected
+                found_appliance = self._selected_appliance(self._device)
+                if found_appliance:
+                    self._set_appliance(found_appliance)
                 try:
                     if action == "test":
                         await async_send(

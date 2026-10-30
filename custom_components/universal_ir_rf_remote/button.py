@@ -17,8 +17,7 @@ def appliance_device_info(runtime: RemoteRuntime, key: str, name: str, kind: str
         identifiers={(DOMAIN, f"{runtime.entry.entry_id}_{key}")},
         name=name,
         manufacturer="Universal IR RF Remote Manager",
-        model=f"Virtual {kind} appliance",
-        via_device=(DOMAIN, runtime.entry.entry_id),
+        model=f"Virtual {kind.replace('_', ' ')} appliance",
     )
 
 

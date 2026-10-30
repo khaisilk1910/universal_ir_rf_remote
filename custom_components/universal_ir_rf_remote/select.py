@@ -14,6 +14,7 @@ from homeassistant.helpers.entity_registry import async_get as async_get_entitie
 
 from . import ManagerConfigEntry, RemoteRuntime, async_send
 from .button import appliance_device_info
+from .const import FAN_APPLIANCE_KINDS
 
 
 async def async_setup_entry(
@@ -27,7 +28,7 @@ async def async_setup_entry(
         if not runtime.library.loaded:
             return
         expected = {key for key, dev in runtime.library.devices.items()
-                    if dev.get("kind") == "fan" and dev["commands"]}
+                    if dev.get("kind") in FAN_APPLIANCE_KINDS and dev["commands"]}
         for key in expected:
             if key not in known:
                 entity = FanSpeedSelect(runtime, key)

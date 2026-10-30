@@ -17,4 +17,51 @@ DEFAULT_FAN_DEVICE = "fan"
 DEFAULT_FAN_SPEED_COUNT = 6
 DEFAULT_REPEATS = 1
 
-DEFAULT_DEVICES = ("device",)
+
+# UI grouping only: selecting a type does not create a native HA climate/cover/light entity.
+# Values are stable IDs stored in the per-remote library; do not rename or reorder old IDs.
+APPLIANCE_KINDS: tuple[str, ...] = (
+    'generic',
+    'air_conditioner',
+    'air_cooler',
+    'air_purifier',
+    'heater',
+    'fireplace',
+    'fan',
+    'ceiling_fan',
+    'exhaust_fan',
+    'humidifier',
+    'dehumidifier',
+    'water_heater',
+    'tv',
+    'projector',
+    'projector_screen',
+    'set_top_box',
+    'streaming_box',
+    'satellite_receiver',
+    'av_receiver',
+    'amplifier',
+    'soundbar',
+    'speaker',
+    'dvd_player',
+    'media_player',
+    'light',
+    'led_strip',
+    'dimmer',
+    'switch',
+    'smart_plug',
+    'curtain',
+    'blinds',
+    'roller_shutter',
+    'awning',
+    'garage_door',
+    'gate',
+    'door_lock',
+    'doorbell',
+    'alarm',
+    'camera',
+    'robot_vacuum',
+    'irrigation',
+    'motorized_bed',
+)
+FAN_APPLIANCE_KINDS = frozenset(("fan", "ceiling_fan", "exhaust_fan"))

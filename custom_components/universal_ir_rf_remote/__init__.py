@@ -27,6 +27,7 @@ from .const import (
     CONF_REMOTE_ENTITY, CONF_ENABLE_FAN,
     CONF_FAN_DEVICE, CONF_FAN_SPEED_COUNT, CONF_RF_FREQUENCY_ENTITY,
     DEFAULT_FAN_DEVICE, DEFAULT_FAN_SPEED_COUNT, DEFAULT_REPEATS,
+    APPLIANCE_KINDS,
 )
 from .library import CodeLibrary
 
@@ -306,7 +307,7 @@ def _register_services(hass: HomeAssistant) -> None:
         DOMAIN, "create_device", create_device,
         schema=vol.Schema({**targets,
             vol.Required("name"): vol.All(cv.string, vol.Length(min=1, max=128)),
-            vol.Optional("kind", default="generic"): vol.In(("generic", "fan", "tv", "light")),
+            vol.Optional("kind", default="generic"): vol.In(APPLIANCE_KINDS),
             vol.Optional("provider_device"): cv.string,
         }),
     )
@@ -383,6 +384,52 @@ async def _async_update_listener(hass: HomeAssistant, entry: ManagerConfigEntry)
     await hass.config_entries.async_reload(entry.entry_id)
 
 
+@callback
+def _remove_legacy_library_device(hass: HomeAssistant, entry: ManagerConfigEntry) -> None:
+    """Prune the old synthetic manager device without deleting any appliances.
+
+    Older releases linked all virtual appliances via a synthetic library parent.
+    Home Assistant 2026.10 cascades parent/child removal in its device registry;
+    unlinking first is essential for preserving the existing device IDs, areas,
+    buttons and fan mappings. No library data is modified by this migration.
+    """
+    from homeassistant.helpers import device_registry as dr, entity_registry as er
+
+    devices = dr.async_get(hass)
+    parent = devices.async_get_device_by_identifier(
+        (DOMAIN, entry.entry_id), entry.entry_id,
+    )
+    if parent is None:
+        return  # No legacy manager registered for this config entry.
+
+    # Detach every associated virtual appliance before pruning the parent.
+    # Preserve the registry entry (and its user-chosen name, area and entity IDs).
+    for appliance in tuple(dr.async_entries_for_config_entry(devices, entry.entry_id)):
+        if appliance.id != parent.id and getattr(appliance, "via_device_id", None) == parent.id:
+            devices.async_update_device(appliance.id, via_device_id=None)
+
+    # Current HA also supports strict child devices. Never delete an old parent
+    # if it still has real children: deleting it would cascade to those devices.
+    if dr.async_entries_for_parent_device(devices, parent.id):
+        _LOGGER.warning("Cannot prune legacy manager device %s: child devices remain", parent.id)
+        return
+
+    entities = er.async_get(hass)
+    # Remove the obsolete hub-level 'Learned commands' sensor registry entry.
+    obsolete = entities.async_get_entity_id("sensor", DOMAIN, f"{entry.entry_id}_learned_codes")
+    if obsolete:
+        entities.async_remove(obsolete)
+
+    # Preserve any other user-customized legacy entities by unlinking rather
+    # than deleting them. For example an old, still-enabled generic fan.
+    for registered in tuple(er.async_entries_for_device(
+        entities, parent.id, include_disabled_entities=True,
+    )):
+        entities.async_update_entity(registered.entity_id, device_id=None)
+
+    devices.async_remove_device(parent.id)
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ManagerConfigEntry) -> bool:
     """Create virtual entities; postpone metadata I/O until HA is started."""
     # entry_id comes from HA, but sanitize it anyway before using as a filename.
@@ -396,10 +443,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ManagerConfigEntry) -> b
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    async def load_after_startup() -> None:
+        # Keep disk I/O outside startup. Only prune the old device after the
+        # library has loaded and HA has forwarded all entity platforms.
+        await library.async_load()
+        try:
+            _remove_legacy_library_device(hass, entry)
+        except Exception:
+            _LOGGER.exception("Could not migrate old library device for %s", entry.entry_id)
+
     @callback
     def after_started(_hass: HomeAssistant) -> None:
         entry.async_create_background_task(
-            hass, library.async_load(), f"{DOMAIN} {entry.entry_id} library load",
+            hass, load_after_startup(), f"{DOMAIN} {entry.entry_id} library load",
         )
 
     entry.async_on_unload(async_at_started(hass, after_started))

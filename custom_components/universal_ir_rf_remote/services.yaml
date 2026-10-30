@@ -144,7 +144,51 @@ create_device:
       name: Type
       selector:
         select:
-          options: [generic, fan, tv, light]
+          mode: dropdown
+          options:
+            - {value: generic, label: "Other / Custom" }
+            - {value: air_conditioner, label: "Air conditioner" }
+            - {value: air_cooler, label: "Air cooler" }
+            - {value: air_purifier, label: "Air purifier" }
+            - {value: heater, label: "Heater" }
+            - {value: fireplace, label: "Electric fireplace" }
+            - {value: fan, label: "Fan" }
+            - {value: ceiling_fan, label: "Ceiling fan" }
+            - {value: exhaust_fan, label: "Ventilation / Exhaust fan" }
+            - {value: humidifier, label: "Humidifier" }
+            - {value: dehumidifier, label: "Dehumidifier" }
+            - {value: water_heater, label: "Water heater" }
+            - {value: tv, label: "Television" }
+            - {value: projector, label: "Projector" }
+            - {value: projector_screen, label: "Motorized projector screen" }
+            - {value: set_top_box, label: "TV / Cable set-top box" }
+            - {value: streaming_box, label: "Streaming device" }
+            - {value: satellite_receiver, label: "Satellite receiver" }
+            - {value: av_receiver, label: "AV receiver" }
+            - {value: amplifier, label: "Amplifier" }
+            - {value: soundbar, label: "Soundbar" }
+            - {value: speaker, label: "Speaker" }
+            - {value: dvd_player, label: "DVD / Blu-ray player" }
+            - {value: media_player, label: "Other media player" }
+            - {value: light, label: "Light" }
+            - {value: led_strip, label: "LED strip / Controller" }
+            - {value: dimmer, label: "Dimmer" }
+            - {value: switch, label: "RF switch / Relay" }
+            - {value: smart_plug, label: "RF socket / Plug" }
+            - {value: curtain, label: "Motorized curtain" }
+            - {value: blinds, label: "Motorized blinds" }
+            - {value: roller_shutter, label: "Roller shutter" }
+            - {value: awning, label: "Motorized awning" }
+            - {value: garage_door, label: "Garage door" }
+            - {value: gate, label: "Gate opener" }
+            - {value: door_lock, label: "Remote door lock" }
+            - {value: doorbell, label: "Wireless doorbell" }
+            - {value: alarm, label: "Security alarm / Siren" }
+            - {value: camera, label: "Remote-controlled camera" }
+            - {value: robot_vacuum, label: "Robot vacuum" }
+            - {value: irrigation, label: "Irrigation controller" }
+            - {value: motorized_bed, label: "Motorized bed / Recliner" }
+
     provider_device:
       name: Provider device key (optional)
       selector: {text: {}}

@@ -11,7 +11,6 @@ from __future__ import annotations
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity_registry import async_get as async_get_entities
@@ -268,12 +267,6 @@ class GenericRemoteFan(FanEntity):
         self._attr_speed_count = runtime.fan_speed_count
         self._attr_percentage = None
         self._last_on_level: int | None = None
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, runtime.entry.entry_id)},
-            name=f"Universal IR RF Remote Manager - {runtime.remote_entity}",
-            manufacturer="Universal IR RF Remote Manager",
-            model="Legacy fan (migrate in Configure > Remote and fan settings)",
-        )
 
     @property
     def available(self) -> bool:
