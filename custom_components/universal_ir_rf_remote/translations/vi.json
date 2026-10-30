@@ -26,10 +26,10 @@
       },
       "learn_command": {
         "title": "Học lệnh IR/RF",
-        "description": "Remote: {remote}. Chọn IR hoặc RF rồi nhấn **Bắt đầu học** để bắt đầu chờ tín hiệu. IR: nhấn nút remote một lần sau khi bắt đầu. Broadlink RF: phần cứng bắt buộc dò tần số trước (giữ hoặc nhấn lặp lại), sau đó nhấn ngắn lần nữa để thu mã. Không thể bỏ qua bước dò hoặc ép tần số 315/433 ở đây. Xem Notifications của Home Assistant.",
+        "description": "Remote: {remote}. Chọn thiết bị, sau đó **tự nhập tên lệnh bất kỳ** (ví dụ: Đèn ngủ, Mở cổng, Chế độ phim). Không cần dùng power, speed_1 hay tên lệnh cố định. Nhấn **Bắt đầu học** để chờ tín hiệu. IR: nhấn một lần. Broadlink RF: dò tần số (nhấn giữ/nhấn nhiều lần), sau đó nhấn một lần để thu mã. Xem Thông báo Home Assistant.",
         "data": {
           "device": "Thiết bị cần điều khiển",
-          "command": "Tên lệnh",
+          "command": "Tên lệnh tự đặt (không giới hạn tên mẫu)",
           "command_type": "Loại tín hiệu (IR / RF)",
           "alternative": "Học mã luân phiên"
         },
@@ -37,7 +37,7 @@
       },
       "confirm_test": {
         "title": "Kiểm tra và lưu thông tin",
-        "description": "{status_info}\nThiết bị: {device}, lệnh: {command}, loại: {wave_type}",
+        "description": "{status_info}\nThiết bị: {device}, lệnh: {command}, loại: {wave_type}\nLưu và học tiếp cho phép tự nhập tên lệnh mới.",
         "data": {
           "action_choice": "Thao tác",
           "repeats": "Số lần phát"
@@ -56,7 +56,7 @@
         "description": "Gửi lệnh bằng remote này. Mã phải được lưu trong nhà cung cấp hoặc được nhà cung cấp hỗ trợ dạng trực tiếp.",
         "data": {
           "device": "Thiết bị",
-          "command": "Tên lệnh",
+          "command": "Tên lệnh (tự nhập)",
           "repeats": "Số lần phát"
         }
       },
@@ -127,7 +127,7 @@
         "description": "Chọn thiết bị, đặt tên lệnh rồi dán chuỗi Base64 (có hoặc không có b64:). Không cần học RF lại. Áp dụng cho remote hỗ trợ mã b64: như Broadlink.",
         "data": {
           "device": "Thiết bị",
-          "command": "Tên lệnh",
+          "command": "Tên lệnh tự đặt",
           "command_type": "Loại tín hiệu",
           "code": "Mã Base64"
         }

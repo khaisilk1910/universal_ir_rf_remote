@@ -26,10 +26,10 @@
       },
       "learn_command": {
         "title": "Learn an IR/RF command",
-        "description": "Remote: {remote}. Choose IR or RF and tap **Start learning** to start waiting for a signal. IR: press the remote button once when learning starts. Broadlink RF: its firmware requires frequency scan (hold or repeatedly press), then one short press to capture. You cannot skip the RF sweep or manually select 315/433 here. Follow Home Assistant Notifications.",
+        "description": "Remote: {remote}. Choose a saved appliance, then **type any command name** (e.g. Movie mode, Air conditioning 25°C, Gate open). No fixed command list is required. Tap **Start learning** to begin. IR: press the original remote once. Broadlink RF: scan frequency (hold/press repeatedly) then press once to capture. Follow Home Assistant Notifications.",
         "data": {
           "device": "Appliance",
-          "command": "Command",
+          "command": "Custom command name (any name)",
           "command_type": "Signal type (IR / RF)",
           "alternative": "Alternating codes"
         },
@@ -37,7 +37,7 @@
       },
       "confirm_test": {
         "title": "Test and save metadata",
-        "description": "{status_info}\nAppliance: {device}, command: {command}, type: {wave_type}",
+        "description": "{status_info}\nAppliance: {device}, command: {command}, type: {wave_type}\nSave and next lets you type a different new command name.",
         "data": {
           "action_choice": "Action",
           "repeats": "Repeats"
@@ -56,7 +56,7 @@
         "description": "Send a command through this remote. The signal must already be stored by the provider, or be an inline code that provider accepts.",
         "data": {
           "device": "Appliance",
-          "command": "Command",
+          "command": "Command name (any name)",
           "repeats": "Repeats"
         }
       },
@@ -127,7 +127,7 @@
         "description": "Choose an appliance, enter a name and paste Base64 code (with or without b64:). This avoids RF learning entirely. Supported for providers accepting raw b64: packets, including Broadlink.",
         "data": {
           "device": "Appliance",
-          "command": "Command label",
+          "command": "Custom command name",
           "command_type": "Signal type",
           "code": "Base64 code"
         }

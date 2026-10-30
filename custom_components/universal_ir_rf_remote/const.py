@@ -18,9 +18,3 @@ DEFAULT_FAN_SPEED_COUNT = 6
 DEFAULT_REPEATS = 1
 
 DEFAULT_DEVICES = ("device",)
-DEFAULT_COMMANDS = (
-    "power", "on", "off", "toggle", "vol_up", "vol_down", "mute",
-    "up", "down", "stop", "open", "close", "light", "reverse",
-    "speed_1", "speed_2", "speed_3", "speed_4", "speed_5", "speed_6",
-    "turn_off",
-)

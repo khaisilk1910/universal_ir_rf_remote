@@ -132,6 +132,12 @@ async def async_learn(
         await runtime.library.async_load()
         matched = runtime.library._find(device)
         if matched:
+            # Friendly labels can be renamed without renaming provider keys.
+            # Relearning a saved label must replace the *original* provider
+            # command, not silently create a second unrelated code.
+            saved = matched[1]["commands"].get(command)
+            if saved:
+                command = saved.get("provider_command", command)
             device = matched[1]["provider_device"]
     payload = {
         "entity_id": runtime.remote_entity, "device": device, "command": command,

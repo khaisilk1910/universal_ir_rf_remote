@@ -16,7 +16,7 @@ from . import RemoteRuntime, async_delete, async_learn, async_send, async_remove
 from .const import (
     DOMAIN, CONF_REMOTE_ENTITY, CONF_ENABLE_FAN,
     CONF_FAN_DEVICE, CONF_FAN_SPEED_COUNT, CONF_RF_FREQUENCY_ENTITY,
-    DEFAULT_FAN_SPEED_COUNT, DEFAULT_REPEATS, DEFAULT_DEVICES, DEFAULT_COMMANDS,
+    DEFAULT_FAN_SPEED_COUNT, DEFAULT_REPEATS, DEFAULT_DEVICES,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -87,7 +87,7 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self) -> None:
         self._device = "device"
-        self._command = "power"
+        self._command = ""
         self._type = "ir"
         self._type_initialized = False
         self._alternative = False
@@ -120,10 +120,6 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
             self._device, *self._runtime.library.codes.keys(), *DEFAULT_DEVICES,
         ]))
 
-    def _commands(self):
-        commands = self._runtime.library.codes.get(self._device, {})
-        return list(dict.fromkeys([self._command, *commands.keys(), *DEFAULT_COMMANDS]))
-
     async def async_step_init(self, user_input=None):
         if user_input is not None:
             choice = user_input["menu_choice"]
@@ -132,6 +128,7 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
             if choice == "import_code":
                 return await self.async_step_import_code()
             if choice == "learn_command":
+                self._command = ""  # New signal: let the user choose any name.
                 return await self.async_step_learn_command()
             if choice == "library":
                 return await self.async_step_library()
@@ -174,6 +171,7 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
                 if action == "commands":
                     return await self.async_step_manage_commands()
                 if action == "learn":
+                    self._command = ""
                     return await self.async_step_learn_command()
                 if action == "import_code":
                     return await self.async_step_import_code()
@@ -285,6 +283,7 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
             if action == "import_code":
                 return await self.async_step_import_code()
             if action == "learn":
+                self._command = ""
                 return await self.async_step_learn_command()
             command = user_input.get("selected_command")
             if command in commands:
@@ -415,7 +414,8 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
             self._command = str(user_input["command"]).strip()
             self._type = user_input["command_type"]
             self._alternative = bool(user_input.get("alternative", False))
-            if not self._device or not self._command:
+            if (not self._device or len(self._device) > 128
+                    or not self._command or len(self._command) > 128):
                 errors["base"] = "invalid_name"
             elif self._learn_task is not None and not self._learn_task.done():
                 return await self.async_step_learn_progress()
@@ -440,7 +440,7 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
             step_id="learn_command", errors=errors,
             data_schema=vol.Schema({
                 vol.Required("device", default=self._device): _name_selector(self._devices()),
-                vol.Required("command", default=self._command): _name_selector(self._commands()),
+                vol.Required("command", default=self._command): selector.TextSelector(),
                 # The HA remote API accepts only IR or RF. Separate 315/433
                 # choices are not supported by Broadlink's learn_command API.
                 vol.Required("command_type", default=self._type):
@@ -535,14 +535,9 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
                 else:
                     self._pending = False
                     if action == "save_and_next":
-                        if self._command.startswith("speed_"):
-                            suffix = self._command.removeprefix("speed_")
-                            if suffix.isdigit():
-                                level = int(suffix) + 1
-                                self._command = (
-                                    f"speed_{level}" if level <= self._runtime.fan_speed_count
-                                    else "turn_off"
-                                )
+                        # No fan-specific naming rules: every next command has
+                        # its own freely entered label, regardless of appliance.
+                        self._command = ""
                         return await self.async_step_learn_command()
                     return self._finish()
             elif action == "relearn":
@@ -599,6 +594,7 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
             if action == "close":
                 return self._finish()
             if action == "add_new":
+                self._command = ""
                 return await self.async_step_learn_command()
             selected = keys.get(user_input.get("selected_item", ""))
             if selected is None:
@@ -701,7 +697,7 @@ class UniversalRemoteOptionsFlow(config_entries.OptionsFlow):
             step_id="send_command", errors=errors,
             data_schema=vol.Schema({
                 vol.Optional("device", default=self._device): selector.TextSelector(),
-                vol.Required("command", default=self._command): _name_selector(self._commands()),
+                vol.Required("command", default=self._command): selector.TextSelector(),
                 vol.Optional("repeats", default=DEFAULT_REPEATS):
                     selector.NumberSelector(selector.NumberSelectorConfig(
                         min=1, max=5, step=1,
